@@ -1,0 +1,5 @@
+# BONK BACKEND
+
+gcloud auth login
+gcloud config set project bonkboard
+yarn run deploy:handleWebhookIndexer

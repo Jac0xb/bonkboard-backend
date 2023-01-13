@@ -1,0 +1,15 @@
+{
+  "extends": "./node_modules/gts/tsconfig-google.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "build",
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "module": "commonjs", // set to esnext (for dynamic import() support)
+    "moduleResolution": "node" // set to node (to match webpack resolution)
+    // "isolatedModules": true // set to true (requirement for SWC / babel)
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts"],
+  "exclude": ["node_modules", "**/node_modules"]
+}

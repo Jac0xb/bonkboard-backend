@@ -3,7 +3,9 @@ import {Connection, PublicKey} from '@solana/web3.js';
 import {BONK_BOARD_IDL} from './IDL';
 
 export const BB_CODER = new BorshCoder(BONK_BOARD_IDL);
-export const CONNECTION = new Connection(process.env.SOLANA_RPC!);
+export const CONNECTION = new Connection(
+  process.env.SOLANA_RPC ?? 'https://solana-mainnet.rpc.extrnode.com'
+);
 export const BB_PROGRAM_ID = new PublicKey(
   'bbggT3MZKdJ2cgHQpfSZJFvKHrvAm3NHSqxHq2zoe7A'
 );

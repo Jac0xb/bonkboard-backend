@@ -1,5 +1,11 @@
 # BONK BACKEND
 
-gcloud auth login
-gcloud config set project bonkboard
-yarn run deploy:handleWebhookIndexer
+- To setup firestore
+
+  - Go to https://console.developers.google.com/apis/api/firestore.googleapis.com/overview
+  - Go to https://console.cloud.google.com/datastore/setup
+
+- Run
+  gcloud auth login
+  gcloud config set project <project-name>
+  yarn run deploy

@@ -10,7 +10,7 @@ if (process.env.K_SERVICE) {
   });
 } else {
   console.log('Running locally');
-  const serviceAccount = require('../../../.secrets/firebase-service.json');
+  const serviceAccount = require('../../../../.secrets/firebase-service.json');
   app = admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
   });

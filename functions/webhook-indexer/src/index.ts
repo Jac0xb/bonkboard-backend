@@ -1,38 +1,35 @@
 import {Request, Response} from '@google-cloud/functions-framework';
-import {BorshCoder} from '@project-serum/anchor';
 import {bs58} from '@project-serum/anchor/dist/cjs/utils/bytes';
-import {Connection, PublicKey} from '@solana/web3.js';
 import {firestore} from 'firebase-admin';
 import {getFirestore} from 'firebase-admin/firestore';
 import {app} from './firebase';
 import {BONK_BOARD_IDL} from './IDL';
 import {DrawInstructionDecoded, TransactionResponseJson} from './types';
-import './env';
 import {BB_CODER, BB_PROGRAM_ID, CONNECTION, getAccountKey} from './utils';
 
+import './env';
+
 export async function handleWebhookIndexer(req: Request, res: Response) {
-  const txs: TransactionResponseJson[] = req.body;
+  const txResponses: TransactionResponseJson[] = req.body;
 
-  console.log(JSON.stringify(req.rawHeaders));
+  for (const txResponse of txResponses) {
+    const signature = txResponse.transaction.signatures[0];
+    const slot = txResponse.slot;
+    const blocktime = txResponse.blockTime;
 
-  for (const tx of txs) {
-    const signature = tx.transaction.signatures[0];
-    console.log(`Processing tx: ${signature}`);
-
-    if (tx.meta && tx.meta.err !== null) {
+    if (txResponse.meta && txResponse.meta.err !== null) {
       continue;
     }
 
-    const accountKeys = tx.transaction.message.accountKeys;
+    console.log(`Processing tx: ${signature}`);
 
-    for (const ix of tx.transaction.message.instructions) {
+    const accountKeys = txResponse.transaction.message.accountKeys;
+    const instructions = txResponse.transaction.message.instructions;
+
+    for (const ix of instructions) {
       const ixProgram = accountKeys[ix.programIdIndex];
 
       if (ixProgram !== BB_PROGRAM_ID.toString()) {
-        continue;
-      }
-
-      if (tx.meta?.err) {
         continue;
       }
 
@@ -62,21 +59,21 @@ export async function handleWebhookIndexer(req: Request, res: Response) {
           accountKeys
         );
 
-        let lastSlot = 0;
+        let lastSeenSlot = 0;
         let encodedBoardState: string | undefined = undefined;
-        while (lastSlot < tx.slot) {
+        while (lastSeenSlot < slot) {
           const result = await CONNECTION.getAccountInfoAndContext(
             boardAccount,
             'confirmed'
           );
 
           encodedBoardState = bs58.encode(result.value!.data);
-          lastSlot = result.context.slot;
+          lastSeenSlot = result.context.slot;
 
-          if (lastSlot >= tx.slot) {
+          if (lastSeenSlot >= slot) {
             break;
           } else {
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise(resolve => setTimeout(resolve, 250));
           }
         }
 
@@ -92,15 +89,15 @@ export async function handleWebhookIndexer(req: Request, res: Response) {
 
         for (const pixel of drawIx.pixels) {
           console.log(
-            `User: ${user}, Pixel position: ${pixel.coord.x}, ${pixel.coord.y}, Pixel color: ${pixel.color.r} ${pixel.color.g} ${pixel.color.b}`
+            `User: ${user}, Pixel position: ${pixel.coord.x}, f${pixel.coord.y}, Pixel color: ${pixel.color.r} ${pixel.color.g} ${pixel.color.b}`
           );
         }
 
         await Promise.all([
           activitiesRef.set({
-            slot: tx.slot,
+            slot: slot,
             signature: signature,
-            timestamp: tx.blockTime,
+            timestamp: blocktime,
             user: user.toString(),
             activities: drawIx.pixels.map(pixel => ({
               x: pixel.coord.x,
@@ -110,10 +107,10 @@ export async function handleWebhookIndexer(req: Request, res: Response) {
           }),
           userRef.set(
             {
-              lastUpdatedSlot: tx.slot,
+              lastUpdatedSlot: slot,
               lastUpdatedSignature: signature,
-              lastUpdated: tx.blockTime,
-              pixelsPlaced: firestore.FieldValue.increment(1),
+              lastUpdated: blocktime,
+              pixelsPlaced: firestore.FieldValue.increment(numOfPixelsPlaced),
               bonkBurned: firestore.FieldValue.increment(bonkBurned),
               bonkPaid: firestore.FieldValue.increment(bonkPaid),
             },
@@ -128,9 +125,9 @@ export async function handleWebhookIndexer(req: Request, res: Response) {
             {merge: true}
           ),
           boardRef.set({
-            lastUpdatedSlot: tx.slot,
+            lastUpdatedSlot: slot,
             lastUpdatedSignature: signature,
-            lastUpdated: tx.blockTime,
+            lastUpdated: blocktime,
             boardState: encodedBoardState,
           }),
         ]);

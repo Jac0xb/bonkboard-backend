@@ -89,7 +89,7 @@ export async function handleWebhookIndexer(req: Request, res: Response) {
 
         for (const pixel of drawIx.pixels) {
           console.log(
-            `User: ${user}, Pixel position: ${pixel.coord.x}, f${pixel.coord.y}, Pixel color: ${pixel.color.r} ${pixel.color.g} ${pixel.color.b}`
+            `User: ${user}, Pixel position: ${pixel.coord.x}, ${pixel.coord.y}, Pixel color: ${pixel.color.r} ${pixel.color.g} ${pixel.color.b}`
           );
         }
 
